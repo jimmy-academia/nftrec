@@ -1,8 +1,15 @@
 import random
+from pathlib import Path
 from collections import defaultdict
-from typing import Tuple, Dict
+# from typing import Tuple, Dict
 from tqdm import tqdm
+
 from utils import *
+from arguments import nft_project_names
+
+from debug import check
+
+import logging
 
 def prepare_nft_data():
     '''
@@ -18,11 +25,11 @@ def prepare_nft_data():
         project_file = clean_dir/f'{project_name}.json'
 
         if not project_file.exists(): 
-            print(f'data_preprocessing: preparing {project_file}...')
+            logging.info(f'data_preprocessing: preparing {project_file}...')
             nft_project_data = load_nft_project(project_name, clean_dir, data_files)
             dumpj(nft_project_data, project_file)
         else:
-            print(f'data_preprocessing: {project_file} exists')
+            logging.info(f'data_preprocessing: {project_file} exists')
 
 def load_nft_project(project_name, tiny_dir, data_files):
 
