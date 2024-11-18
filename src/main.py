@@ -3,13 +3,14 @@ import argparse
 from dataset import prepare_nft_data
 from experiments import *
 from utils import set_seed, set_verbose
+from rich import print
 
 def main():
 
     print('cdd <=> cdp')
     print('\n === \n work on: main experiments => \n === \n')
     print('''
-        ~~1. NFT data in dataset.py~~
+        [strike]1. NFT data in dataset.py[/strike]
         2. solver/base.py: => make random work!
         - solver/project.py
         - solver/base.py => opt_uniform_holding

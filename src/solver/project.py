@@ -2,7 +2,7 @@ import random
 from utils import *
 from debug import *
 from arguments import nft_project_names
-min_purchase = [10, 2, 2, 2, 1, 2, 1]
+min_purchase = [6, 2, 2, 2, 1, 2, 1]
 
 class NFTProject:
     def __init__(self, nft_project_data, setN, setM, nft_project_name):
@@ -15,32 +15,28 @@ class NFTProject:
     def numericalize(self, nft_project_data):
         asset_traits, buyer_assets_ids, buyer_budgets, item_counts = nft_project_data['asset_traits'], nft_project_data['buyer_assets_ids'], nft_project_data['buyer_budgets'], nft_project_data['item_counts']
 
-        max_item_len = min(max([len(x) for x in buyer_assets_ids]), 10)
+        max_item_len = max([len(x) for x in buyer_assets_ids])
         min_purchase_limit = min_purchase[nft_project_names.index(self.nft_project_name)] if self.nft_project_name in nft_project_names else 1
-        alluser_prefs = []
-        buyer_num = self.setN if self.setN is not None else len(buyer_assets_ids)
 
-        ## collect NFT item set
+        ## collect NFT item set and user prefs
+        alluser_prefs = []
         nft_set = set()
         num_trades = 0
-        for i in range(min(buyer_num, len(buyer_assets_ids))):
-            if len(buyer_assets_ids[i]) < min_purchase_limit:
+        for _assest_list in buyer_assets_ids:
+            if len(_assest_list) < min_purchase_limit:
                 continue
-            num_trades += len(buyer_assets_ids[i])
-            nft_set |= set(buyer_assets_ids[i])
-            user_prefs = self.trait2label_vec([asset_traits[aid] for aid in buyer_assets_ids[i]])
-            # pad until max length, then change shape
+            num_trades += len(_assest_list)
+            nft_set |= set(_assest_list)
+            user_prefs = self.trait2label_vec([asset_traits[aid] for aid in _assest_list])
+            # pad until max length, then transpose
             if len(user_prefs) <= max_item_len:
                 user_prefs = user_prefs + [user_prefs[-1]]*(max_item_len - len(user_prefs))
             else:
                 user_prefs = user_prefs[:max_item_len]
-
             user_prefs = [list(x) for x in zip(*user_prefs)]
             alluser_prefs.append(user_prefs)
 
-        self.N = self.setN if self.setN is not None else len(buyer_assets_ids)
-        if 'large' in self.nft_project_name:
-            nft_set = set(range(self.N))            
+        self.N = self.setN if self.setN is not None else len(alluser_prefs)
         self.M = self.setM if self.setM is not None else len(nft_set)
 
         ## process buyer list

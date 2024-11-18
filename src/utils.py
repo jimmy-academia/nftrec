@@ -1,5 +1,6 @@
 import re
 import json
+import torch
 import argparse
 
 class NamespaceEncoder(json.JSONEncoder):
@@ -58,8 +59,44 @@ def set_verbose(verbose):
     # logging.info("Logging setup complete - INFO test")
     # logging.debug("Logging setup complete - DEBUG test")
 
+def deep_to_cpu(obj):
+    if isinstance(obj, torch.Tensor):
+        return obj.cpu()
+    elif isinstance(obj, dict):
+        return {k: deep_to_cpu(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [deep_to_cpu(v) for v in obj]
+    else:
+        return obj
 
-if __name__ == '__main__':
-    set_verbose(0)
-    set_verbose(1)
-    set_verbose(2)
+def deep_to_pylist(obj):
+    if isinstance(obj, torch.Tensor):
+        # If it's a scalar tensor, use item()
+        if obj.numel() == 1:
+            return obj.item()
+        else:
+            return obj.cpu().tolist()
+    elif isinstance(obj, dict):
+        return {k: deep_to_pylist(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [deep_to_pylist(v) for v in obj]
+    else:
+        return obj
+    
+def deep_to_device(obj, device):
+    if isinstance(obj, torch.Tensor):
+        return obj.to(device)
+    elif isinstance(obj, dict):
+        return {k: deep_to_device(v, device) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [deep_to_device(v, device) for v in obj]
+    else:
+        return obj
+    
+def torch_cleansave(obj, path):
+    obj = deep_to_cpu(obj)
+    torch.save(obj, path)
+
+def torch_cleanload(path, device):
+    obj = torch.load(path, weights_only=True)
+    return deep_to_device(obj, device)

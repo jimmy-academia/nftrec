@@ -3,6 +3,8 @@ from solver import get_solver
 from arguments import default_args, nft_project_names, Breeding_Types, Baseline_Methods
 from utils import dumpj
 
+from debug import *
+
 def run_main_exp():
     args = default_args()
     args.checkpoint_dir = args.ckpt_dir / 'main_exp'
@@ -37,9 +39,10 @@ def run_main_exp():
                         'seller_revenue': Solver.seller_revenue,
                         'buyer_utilities': Solver.buyer_utilities, 
                         'pricing': Solver.pricing, 
-                        'holdings': Solver.holdings, 
+                        'total_holdings': Solver.holdings.sum(0), 
                         'buyer_budgets': Solver.buyer_budgets,
                         'nft_counts': Solver.nft_counts,
                     }
+                    Result = {k:deep_to_pylist(v) for k, v in Result.items()}
                     dumpj(Result, result_file)
                     print('______________________________________experiment done.')
