@@ -1,9 +1,11 @@
+import copy
 import torch
 import math
 from tqdm import tqdm
 
 from utils import *
 from .project import NFTProject
+from debug import *
 
 class BaseSolver:
     def __init__(self, args):
@@ -16,6 +18,7 @@ class BaseSolver:
         cache_nft_project_file = cache_dir / f'project.pth'
         if cache_nft_project_file.exists():
             self.nftP = torch.load(cache_nft_project_file, weights_only=False)
+            check()
         else:
             nft_project_data = loadj(f'../NFT_data/clean/{args.nft_project_name}.json')
             self.nftP = NFTProject(nft_project_data, args.setN, args.setM, args.nft_project_name)
@@ -85,16 +88,9 @@ class BaseSolver:
         assert (self.preference_mask * (self.nft_trait_counts==0)).sum() == 0
 
         buyer_budgets = torch.Tensor(self.nftP.user_budgets).to(self.args.device)
-        # scale to  [10, 100]
-        print('new budget settings')
-        # buyer_budgets.clamp_(min=0)  # Ensure that the minimum value is 0
-        # buyer_budgets.sub_(buyer_budgets.min()).div_(buyer_budgets.max() - buyer_budgets.min()).mul_(475).add_(25)
-        # 
-        # print('old budget settings')
         buyer_budgets.clamp_(min=0)  # Ensure that the minimum value is 0
         buyer_budgets.sub_(buyer_budgets.min()).div_(buyer_budgets.max() - buyer_budgets.min()).mul_(90).add_(10)
         
-
         self.buyer_budgets = buyer_budgets
         
     def calc_objective_valuations(self, nft_attributes):
@@ -261,49 +257,7 @@ class BaseSolver:
         sorted_indices = breeding_expectation_values.argsort(descending=True)
         ranked_parent_nfts = torch.gather(parent_nft_sets, 1, sorted_indices.unsqueeze(-1).expand(-1, -1, parent_nft_sets.size(-1)))
         ranked_parent_expectations = torch.gather(breeding_expectation_values, 1, sorted_indices)
-
         return ranked_parent_nfts, ranked_parent_expectations
-
-    def solve(self):
-        '''yields:
-        self.pricing
-        self.holdings (recommendation of purchase amount to each buyer)
-        '''
-        raise NotImplementedError
-
-    def evaluate(self):
-
-        epsilon = 1e-6
-        self.pricing.clamp_(min=0)
-
-        self.holdings = self.solve_user_demand()
-
-        # pricing_demand = self.solve_user_demand()
-        # self.holdings = torch.where(self.holdings > pricing_demand, pricing_demand, self.holdings)
-
-        self.holdings.clamp_(min=0)
-
-        self.holdings *= torch.clamp(self.nft_counts / (self.holdings.sum(0)+epsilon), max=1) ## fit item constraints
-        for user_index in make_batch_indexes(self.nftP.N, 1000):
-            self.holdings[user_index] *= torch.clamp(self.buyer_budgets[user_index] / ((self.holdings[user_index] * self.pricing).sum(1)+epsilon), max=1).view(-1, 1) ## fit budget constraints
-        self.holdings *= torch.clamp(self.buyer_budgets / ((self.holdings * self.pricing).sum(1)+epsilon), max=1).view(-1, 1) ## fit budget constraints
-            
-
-        self.buyer_utilities = []
-        for batch_users in make_batch_indexes(self.nftP.N, 100):
-            self.buyer_utilities.append(self.calculate_buyer_utilities(
-                batch_users,
-                self.holdings[batch_users],
-                self.buyer_budgets[batch_users],
-                self.pricing,   
-                True,
-            ))
-
-        self.buyer_utilities = torch.cat(self.buyer_utilities, dim=0)
-        # seller revenue
-        self.seller_revenue = 0
-        for user_index in make_batch_indexes(self.nftP.N, 1000):
-            self.seller_revenue += (self.pricing * self.holdings[user_index]).sum()
 
     def calculate_buyer_utilities(self, user_index, holdings, budgets, pricing, split=False):
         '''
@@ -314,7 +268,6 @@ class BaseSolver:
         R = budgets - sum_j price_j * holdings_j
         '''
         U_item = (holdings * (self.Vj.to(self.args.device))).sum(1)/2
-
 
         # sub_batch operation
         chunk_size = 32 
@@ -383,58 +336,155 @@ class BaseSolver:
             expectation = expectation *  torch.exp(-population_factor/4) 
         U_breeding = (selection_mask * expectation).sum(1) 
         return U_breeding
-                
-    def solve_user_demand(self, set_user_index=None):
 
-        div = 1
-        if set_user_index is not None:
-            batch_user_iterator = [set_user_index]
-        else:
-            batch_user_iterator = self.buyer_budgets.argsort(descending=True).tolist()
-            div = 20 if self.nftP.N < 9000 else self.nftP.N // 500
-            batch_user_iterator = make_batch_indexes(batch_user_iterator, self.nftP.N//div)
+    def solve(self):
+        '''yields:
+        self.pricing
+        self.holdings (recommendation of purchase amount to each buyer)
+        '''
+        raise NotImplementedError
 
-        if self.args.large:
-            spending = torch.rand(self.nftP.N, self.nftP.M+1)
-        else:
-            spending = torch.rand(self.nftP.N, self.nftP.M+1).to(self.args.device) # N x M+1 additional column for remaining budget
-        
-        spending /= spending.sum(1).unsqueeze(1)
+    def count_results(self):
+        # iterate over buyers, modifying if budget or supply limit is reached.
+        self.seller_revenue = 0
+        self.buyer_utilities = []
+        self.assigned = torch.zeros_like(self.holdings[0])
 
-        pbar = tqdm(range(16), ncols=88, desc='Solving user demand!', leave=False)
-        
-        user_eps = 1e-4
+        self.pricing.clamp_(min=0)
+        for batch_users in make_batch_indexes(self.nftP.N, 100, True):
+            if not all(self.assigned + self.holdings[batch_users] <= self.nft_counts):
+                excess = (self.assigned + self.holdings[batch_users]) - self.nft_counts
+                excess.clamp_(min=0)  # Only adjust where limits are exceeded
+                self.holdings[batch_users] -= excess
+
+            buyer_spending = (self.pricing * self.holdings[batch_users]).sum(0)
+            if not all(buyer_spending <= self.buyer_budgets[batch_users]):
+                scaling_factor = self.buyer_budgets[batch_users] / buyer_spending
+                self.holdings[batch_users] = self.holdings[batch_users] * scaling_factor
+
+            self.buyer_utilities.append(self.calculate_buyer_utilities(
+                batch_users,
+                self.holdings[batch_users],
+                self.buyer_budgets[batch_users],
+                self.pricing,   
+                True,
+            ))
+
+            self.seller_revenue += (self.pricing * self.holdings[user_index]).sum()
+            self.assigned += self.holdings[batch_users]
+
+    def greedy_init_pricing(self):
+        pricing = torch.rand(self.nftP.M, device=self.args.device) * self.buyer_budgets.mean()
+        for __ in range(16):
+            spending = self.Uij/pricing 
+            spending = spending/spending.sum(1).unsqueeze(1)
+            pricing = (spending * self.buyer_budgets.unsqueeze(1)).sum(0) / self.nft_counts
+        pricing.clamp_(0.1)
+        pricing = pricing.to(self.args.device)
+        return pricing
+
+
+def make_batch_indexes(total, batch_size, shuffle=False):
+    if hasattr(total, '__iter__') and hasattr(total, '__getitem__'):
+        if shuffle:
+            total = copy.deepcopy(total)
+            total = list(total)
+            random.shuffle(total)
+        return (total[i:i+batch_size] for i in range(0, len(total), batch_size))
+    elif isinstance(total, int):
+        indexes = list(range(total))
+        if shuffle:
+            random.shuffle(indexes)  
+        return (indexes[i:i+batch_size] for i in range(0, total, batch_size))
+    else:
+        raise ValueError('total must be an iterable or an integer')
+
+class BaselineSolver(BaseSolver):
+    def __init__(self, args):
+        super().__init__(args)
+        self.k = 20
+
+    def initial_assignment(self):
+        raise NotImplementedError
+    
+    def solve(self):
+        _assignments = self.initial_assignment()
+        self.pricing = self.greedy_init_pricing()
+        self.holdings = self.opt_uniform_holding(_assignments)
+
+    def opt_uniform_holding(self, _assignments):
+        # iterate over batch buyer to adjust holding recommendation for top k assignemnts
+        N, M = self.nftP.N, self.nftP.M
+        batch_size = N // 500 if N >= 9000 else N // 20
+
+        spending = torch.zeros(N, M + 1, device=self.args.device)
+        spending[assignments] = 1.0
+        spending_scales = torch.ones(N, device=self.args.device)
+
+        user_iterator = self.buyer_budgets.argsort(descending=True).tolist()
+        user_iterator = make_batch_indexes(user_iterator, batch_size)
+
+        pbar = tqdm(range(16), desc='Optimizing holdings')
+
+        prev_remaining = float('inf')
         for __ in pbar:
-            buyer_utility = 0
-            for user_index in tqdm(batch_user_iterator, ncols=88, leave=False, total=div+1):
-                spending_var = spending[user_index]
-                if self.args.large:
-                    spending_var = spending_var.to(self.args.device)
-                spending_var.requires_grad = True
+            for user_index in tqdm(user_iterator, desc='process users', leave=False):
+
+                spending_scale = spending_scales[user_index].clone().detach().requires_grad_(True)
+                batch_spending = spending[user_index] * spending_scale.unsqueeze(1)
+
+                batch_budgets = self.buyer_budgets[user_index]
+                holdings = self.hatrelu(
+                    batch_spending[:, :-1] * batch_budgets.unsqueeze(1) / 
+                    self.pricing.unsqueeze(0)
+                    )
+                    
+                utility = self.calculate_buyer_utilities(
+                    user_index, holdings, batch_budgets, self.pricing
+                )
+                    
+                # Update spending scales using gradients
+                utility.sum().backward()
+                spending_scales[user_index] += 1e-2 * spending_scale.grad
+                spending_scales.clamp_(min=0)
+                    
+                # Normalize spending
+                spending = spending / spending.sum(dim=1, keepdim=True)
                 
-                batch_budget = self.buyer_budgets[user_index]
-                holdings = self.hatrelu(spending_var[:, :-1]*batch_budget.unsqueeze(1)/self.pricing.unsqueeze(0))
-                _utility = self.calculate_buyer_utilities(user_index, holdings, batch_budget, self.pricing)
-                _utility.backward(torch.ones_like(_utility))
-
-                buyer_utility += _utility.detach().mean().item()
-                _grad = spending_var.grad.cpu() if self.args.large else spending_var.grad
-                spending[user_index] += user_eps* _grad
-                spending = torch.where(spending < 0, 0, spending)
-                spending /= spending.sum(1).unsqueeze(1)
-            
-            pbar.set_postfix(delta= float(spending[:, -1].sum() - spending[:, -1].sum()))
-
-        if self.args.large:
-            demand = self.hatrelu(spending[:, :-1]*self.buyer_budgets.unsqueeze(1).cpu()/self.pricing.unsqueeze(0).cpu())
-            demand = demand.to(self.args.device)
-        else:
-            demand = self.hatrelu(spending[:, :-1]*self.buyer_budgets.unsqueeze(1)/self.pricing.unsqueeze(0))
+                # Track convergence
+                remaining = spending[:, -1].sum()
+                delta = abs(remaining - prev_remaining)
+                prev_remaining = remaining
+                pbar.set_postfix(delta=float(delta))
+                
+                if delta < 1e-6:
+                    break
+        
+        # Calculate final demand
+        demand = self.hatrelu(
+            spending[:, :-1] * self.buyer_budgets.unsqueeze(1) / 
+            self.pricing.unsqueeze(0)
+        )
+        
         return demand
 
     def hatrelu(self, x, threshold=1):
         return threshold - torch.nn.functional.relu(threshold-x)
 
 
-    
+class RandomSolver(BaselineSolver):
+    def __init__(self, args):
+        super().__init__(args)
+    def initial_assignment(self):
+        random_assignments = torch.stack([torch.randperm(self.nftP.M)[:self.k] for _ in range(self.nftP.N)]).to(self.args.device)
+        return random_assignments
 
+
+
+
+        # user_spending_scale * spending /= (user_spending_scale * spending).sum(1).unsqueeze(1)
+        # pbar = tqdm(range(16), ncols=88, desc='Solving user demand!', leave=False)
+        
+        # user_eps = 1e-4
+        # ### optimize speding scale
+        # for __ in pbar:

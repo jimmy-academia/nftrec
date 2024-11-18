@@ -1,3 +1,4 @@
+from .base import RandomSolver
 from .greedy import GreedySolver
 from .auction import AuctionSolver
 from .group import GroupSolver
@@ -11,6 +12,8 @@ from .market import BANTERSolver
 
 
 def get_solver(args, _method):
+    if _method == 'Random':
+        return RandomSolver(args)
     if _method == 'Greedy':
         return GreedySolver(args)
     if _method == 'Auction':

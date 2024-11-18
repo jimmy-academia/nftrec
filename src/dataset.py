@@ -25,11 +25,11 @@ def prepare_nft_data():
         project_file = clean_dir/f'{project_name}.json'
 
         if not project_file.exists(): 
-            logging.info(f'data_preprocessing: preparing {project_file}...')
+            logging.info(f'dataset.py: preparing {project_file}...')
             nft_project_data = load_nft_project(project_name, clean_dir, data_files)
             dumpj(nft_project_data, project_file)
         else:
-            logging.info(f'data_preprocessing: {project_file} exists')
+            logging.info(f'dataset.py: {project_file} exists')
 
 def load_nft_project(project_name, tiny_dir, data_files):
 
@@ -60,10 +60,9 @@ def filter_nft_attributes(project_name: str, NFT_info: list, trait_system: dict)
     Returns:
     - Tuple of updated NFT_info and trait_system.
     """
-    if project_name in ['axiesinfinity', 'stepn']:
-        trigger = 'None' if project_name == 'axiesinfinity' else 'none'
+    if project_name in ['axiesinfinity']:
+        trigger = 'None' # if project_name == 'axiesinfinity' else 'none'
         NFT_info = [nft for nft in NFT_info if trigger not in nft['trait']]
-
     if project_name in ['boredapeyachtclub', 'roaringleader', 'cryptokitties']:
         trait_system = {trait: trait_system[trait] + ['none'] for trait in trait_system}
     if project_name in ['roaringleader', 'cryptokitties']:
@@ -74,25 +73,7 @@ def filter_nft_attributes(project_name: str, NFT_info: list, trait_system: dict)
         traits = [list(trait_system.keys())[i] for i in trait_select_indices]
         trait_system = {key: trait_system[key] for key in traits}
         NFT_info = [{**nft, 'trait': [nft['trait'][i] for i in trait_select_indices]} for nft in NFT_info]
-    if project_name == 'stepn':
-        NFT_info, trait_system = Augment_StepN(NFT_info, trait_system)
     return NFT_info, trait_system
-
-def Augment_StepN(asset_traits, trait_system):
-    names = ['Efficiency', 'Comfort', 'Durability', 'Luck', 'Efficiency-lv1', 'Comfort-lv1', 'Durability-lv1', 'Luck-lv1', 'Efficiency-lv2', 'Comfort-lv2', 'Durability-lv2', 'Luck-lv2', 'Gem',]
-    socket1 = [22036, 21577, 20264, 18207, 1546, 944, 828, 681, 603, 575, 352, 242, 220]
-    socket2 = [23864, 22188, 21187, 19316, 396, 380, 356, 206, 179, 163, 144, 136, 103]
-    trait_system['socket1'] = names
-    trait_system['socket2'] = names
-    M = len(asset_traits)
-    attr1_list = random.choices(range(len(socket1)), weights=socket1, k=M)
-    attr2_list = random.choices(range(len(socket2)), weights=socket2, k=M)
-    new_asset_traits = []
-    for asset, attr1, attr2 in zip(asset_traits, attr1_list, attr2_list):
-        asset['trait'].append(names[attr1])
-        asset['trait'].append(names[attr2])
-        new_asset_traits.append(asset)
-    return new_asset_traits, trait_system
 
 def fetchinfo(transaction):
     return transaction['buyer_address'], int(transaction['price']), int(transaction['token_ids'][0])

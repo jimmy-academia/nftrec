@@ -30,8 +30,8 @@ def run_main_exp():
 
                     start_time = time.time()
                     Solver.solve() 
+                    Solver.count_results() 
                     runtime = time.time() - start_time
-                    Solver.evaluate() 
                     Result = {
                         'runtime': runtime,
                         'seller_revenue': Solver.seller_revenue,

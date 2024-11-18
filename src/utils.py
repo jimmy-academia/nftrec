@@ -37,7 +37,10 @@ def set_seed(seed):
 
 
 def set_verbose(verbose):
+    # usages: logging.warning; logging.error, logging.info, logging.debug
     import logging
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
     if verbose == 0:
         level = logging.WARNING
     elif verbose == 1:
@@ -48,6 +51,15 @@ def set_verbose(verbose):
         level=level,
         format='%(asctime)s - %(levelname)s - %(message)s',
         datefmt='%H:%M:%S',
-        handlers=[logging.StreamHandler()]  # Print to terminal
+        handlers=[logging.StreamHandler()],  # Print to terminal
     )
+    # Test the logging configuration
+    # logging.warning("Logging setup complete - WARNING test")
+    # logging.info("Logging setup complete - INFO test")
+    # logging.debug("Logging setup complete - DEBUG test")
 
+
+if __name__ == '__main__':
+    set_verbose(0)
+    set_verbose(1)
+    set_verbose(2)

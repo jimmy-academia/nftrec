@@ -49,3 +49,5 @@ class GreedySolver(OptimizationSolver):
         self.holdings = spending/self.pricing
         fulfillment = self.holdings.sum(0) /self.nft_counts
         self.holdings = self.holdings * fulfillment
+
+        
