@@ -1,8 +1,10 @@
+import torch
+from pathlib import Path
 from types import SimpleNamespace
 
 NFT_Projects = ['Axies Infinity', 'Bored Ape Yacht Club', 'Crypto Kitties', 'Fat Ape Club', 'Roaring Leader'] 
 nft_project_names = [''.join(Project_Name.split()).lower() for Project_Name in NFT_Projects]
-Baseline_Methods = ['LightGCN', 'Reciprocal', 'NCF', 'Auction', 'Group',  'HetRecSys', 'BANTER']
+Baseline_Methods = ['Greedy', 'Auction', 'Group', 'NCF', 'LightGCN', 'Reciprocal', 'HetRecSys', 'BANTER']
 Breeding_Types = ['Heterogeneous', 'Homogeneous', 'ChildProject']
 
 def default_args():

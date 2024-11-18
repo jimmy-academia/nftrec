@@ -1,8 +1,23 @@
 import sys
 import argparse
+from dataset import prepare_nft_data
 from experiments import *
 
 def main():
+
+    print('cdn <=> cdp')
+    print('\n === \n work on: main experiments => \n === \n')
+    print('''
+        1. NFT data in dataset.py
+        2. solver/base.py: greedy init pricing + topk + optimize quantity
+        3. finish main experiments, check result
+        ===
+        plan ablation and further experiments
+        ''')
+    print('>stop<')
+    return
+
+    prepare_nft_data()
 
     choices = ['main']
     parser = argparse.ArgumentParser()
@@ -15,10 +30,6 @@ def main():
         for choice in choices:
             getattr(sys.modules[__name__], f'run_{choice}_exp')()
 
-    # print('same structure: main => experiment => module files')
-    # print('but clean up the module files')
-    # print('start with main experiment')
-    pass
 
 
 if __name__ == '__main__':
