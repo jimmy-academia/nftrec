@@ -1,7 +1,10 @@
 import time
+import torch
+import logging
+
 from solver import get_solver
 from arguments import default_args, nft_project_names, Breeding_Types, Baseline_Methods
-from utils import dumpj
+from utils import dumpj, deep_to_pylist
 
 from debug import *
 
@@ -14,19 +17,19 @@ def run_main_exp():
     >>> (main_exp.py) Main experiments:
         {nft_project_names}
         x {Breeding_Types}
-        x {Baseline_Methods}'''
+        x {Baseline_Methods}\n'''
     print(msg)
 
-    for nft_project_name in nft_project_names:
+    for nft_project_name in nft_project_names[::-1]:
         args.nft_project_name = nft_project_name
         for _method in Baseline_Methods:
             for _breed in Breeding_Types:
-                result_file = args.checkpoint_dir / f'{nft_project_name}_{_method}_{_breed}.pth'
+                result_file = args.checkpoint_dir / f'{nft_project_name}_{_method}_{_breed}'
             
                 if result_file.exists() and not args.overwrite:
-                    print(f'|> result file:{result_file} exists <|')
+                    logging.info(f'|> result file:{result_file} exists <|')
                 else:
-                    print(f'...running [{nft_project_name}, {_method}, {_breed}] experiment...')
+                    logging.info(f'...running [{nft_project_name}, {_method}, {_breed}] experiment...')
                     args.breeding_type = _breed
                     Solver = get_solver(args, _method)
 
@@ -37,12 +40,13 @@ def run_main_exp():
                     Result = {
                         'runtime': runtime,
                         'seller_revenue': Solver.seller_revenue,
-                        'buyer_utilities': Solver.buyer_utilities, 
-                        'pricing': Solver.pricing, 
-                        'total_holdings': Solver.holdings.sum(0), 
-                        'buyer_budgets': Solver.buyer_budgets,
-                        'nft_counts': Solver.nft_counts,
+                        'avg_buyer_utility': Solver.buyer_utilities.sum(1).mean().item()
                     }
                     Result = {k:deep_to_pylist(v) for k, v in Result.items()}
-                    dumpj(Result, result_file)
+                    dumpj(Result, result_file.with_suffix('.json'))
+                    torch.save(
+                        {'buyer_utilities': Solver.buyer_utilities, 
+                        'pricing': Solver.pricing}, 
+                        result_file.with_suffix('.pth')
+                        )
                     print('______________________________________experiment done.')

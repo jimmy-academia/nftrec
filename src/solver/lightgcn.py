@@ -4,7 +4,7 @@ from torch_geometric.nn import LightGCN
 
 from tqdm import tqdm
 
-from .group import HeuristicsSolver
+from .base import BaselineSolver
 
 
 from utils import *
@@ -13,7 +13,7 @@ from utils import *
 
 # N buyer M instance
 
-class LightGCNSolver(HeuristicsSolver):
+class LightGCNSolver(BaselineSolver):
     def __init__(self, args):
         super().__init__(args)
         self.model = LightGCN(self.nftP.N+self.nftP.M, 64, 5)

@@ -1,8 +1,7 @@
 import random
 from utils import *
 from debug import *
-from arguments import nft_project_names
-min_purchase = [6, 2, 2, 2, 1, 2, 1]
+from arguments import nft_project_names, min_purchase
 
 class NFTProject:
     def __init__(self, nft_project_data, setN, setM, nft_project_name):

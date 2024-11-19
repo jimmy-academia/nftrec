@@ -7,7 +7,7 @@ from utils import *
 from .project import NFTProject
 from debug import *
 
-from .constant import Constfuncs, make_batch_indexes, hatrelu
+from .constant import Constfuncs, make_batch_indexes
 import logging
 
 class BaseSolver(Constfuncs):
@@ -218,3 +218,12 @@ class RandomSolver(BaselineSolver):
     def initial_assignment(self):
         random_assignments = torch.stack([torch.randperm(self.nftP.M)[:self.k] for _ in range(self.nftP.N)]).to(self.args.device)
         return random_assignments
+
+class GreedySolver(BaselineSolver):
+    def __init__(self, args):
+        super().__init__(args)
+
+    def initial_assignment(self):
+        favorite_assignments = (self.Uij * self.Vj).topk(self.k)[1]
+        return favorite_assignments
+    

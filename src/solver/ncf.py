@@ -1,7 +1,7 @@
 import random
 from tqdm import tqdm
 
-from .group import HeuristicsSolver
+from .base import BaselineSolver
 from utils import *
 
 # N buyer M instance
@@ -53,7 +53,7 @@ class NCFModel(nn.Module):
         
         return prediction
 
-class NCFSolver(HeuristicsSolver):
+class NCFSolver(BaselineSolver):
     def __init__(self, args):
         super().__init__(args)
         self.model = NCFModel(self.nftP.N, self.nftP.M)

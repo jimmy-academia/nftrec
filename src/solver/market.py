@@ -1,6 +1,6 @@
 import torch
 from tqdm import tqdm
-
+from .constant import make_batch_indexes
 from .base import BaseSolver
 from utils import *
 
@@ -24,12 +24,14 @@ class BANTERSolver(BaseSolver):
 
         ## demand-based optimization
         eps = 1001
-        pbar = tqdm(range(10), ncols=88, desc='BANTER Solver!') #64
+        pbar = tqdm(range(64), ncols=88, desc='BANTER Solver!') #64
         self.pricing_list.append(self.pricing)
         if self.args.ablation_id == 2:
             return
 
-        for __ in pbar:
+        if read_inital_steps:
+            self.seller_revenue_list = []
+        for iter_ in pbar:
 
             demand = self.solve_user_demand()
             demand = demand.sum(0)
@@ -46,7 +48,10 @@ class BANTERSolver(BaseSolver):
             pbar.set_postfix(excess=float(excess.sum()))
             self.pricing_list.append(self.pricing)
 
-
+            if read_inital_steps:
+                self.count_results()
+                self.seller_revenue_list.append(self.seller_revenue)
+                if iter_ == 20: break
             # eps *= self.args.decay
         
         self.holdings = self.solve_user_demand()

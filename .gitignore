@@ -1,5 +1,6 @@
-**/ckpt
-**/NFT_data
+**/ckpt/
+**/NFT_data/
+**/output/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

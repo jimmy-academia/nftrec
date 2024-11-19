@@ -4,9 +4,11 @@ from types import SimpleNamespace
 
 NFT_Projects = ['Axies Infinity', 'Bored Ape Yacht Club', 'Crypto Kitties', 'Fat Ape Club', 'Roaring Leader'] 
 nft_project_names = [''.join(Project_Name.split()).lower() for Project_Name in NFT_Projects]
-# Baseline_Methods = ['Greedy', 'Auction', 'Group', 'NCF', 'LightGCN', 'Reciprocal', 'HetRecSys', 'BANTER']
-Baseline_Methods = ['Random']
-Breeding_Types = ['Heterogeneous', 'Homogeneous', 'ChildProject']
+min_purchase = [6, 2, 2, 1, 1]
+
+Baseline_Methods = ['Greedy', 'Auction', 'Group', 'NCF', 'LightGCN', 'HetRecSys', 'BANTER'] # 'Random', 'Reciprocal',
+Breeding_Types = ['Heterogeneous', 'Homogeneous', 'ChildProject', 'None']
+Breeding_Types_Short = ['Heter', 'Homo', 'Child', 'None']
 
 
 def default_args():
@@ -23,7 +25,8 @@ def default_args():
     args.decay = 0.9
     
     args.large = False
-    args.ablation_id = 0
+    args.read_inital_steps = False
+    args.ablation_id = 0 # 0: BANTER 1: BANTER no init 2: INIT
     args.schedule_id = 0 # 0: dynamic, 1: fix weight 2: none
     args.module_id = 0 # 0: f_pop *TildeV (homo)/TildeV+attrclass (heter) 1:TildeV 2:rand
     args.setN = None
@@ -34,3 +37,4 @@ def default_args():
     # args.gamma2 = 0.001
     return args
 
+plot_colors = ['#FFD92F', '#2CA02C', '#FF7F0E', '#1770af', '#ADD8E6', '#D62728']

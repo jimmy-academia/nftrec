@@ -3,14 +3,16 @@ import argparse
 from dataset import prepare_nft_data
 from experiments import *
 from utils import set_seed, set_verbose
-from rich import print
+
+def strike(text):
+    return ''.join([u'\u0336{}'.format(c) for c in text])
 
 def main():
 
     print('cdd <=> cdp')
     print('\n === \n work on: main experiments => \n === \n')
-    print('''
-        [strike]1. NFT data in dataset.py[/strike]
+    print(f'''
+        {strike('1. NFT data in dataset.py')}
         2. solver/base.py: => make random work!
         - solver/project.py
         - solver/base.py => opt_uniform_holding
@@ -20,7 +22,7 @@ def main():
         plan ablation and further experiments
         ''')
 
-    choices = ['main']
+    choices = ['main', 'ablation', 'sensitivity']
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', choices=choices+['all'], default='main')
     parser.add_argument('--seed', type=int, default=0)
@@ -32,7 +34,7 @@ def main():
 
     prepare_nft_data()
 
-    if args.c != all:
+    if args.c != 'all':
         getattr(sys.modules[__name__], f'run_{args.c}_exp')()
     else:
         for choice in choices:

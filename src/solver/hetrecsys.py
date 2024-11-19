@@ -1,11 +1,11 @@
 import random
 import torch
 from tqdm import tqdm
-from .group import HeuristicsSolver
-
+from .base import BaselineSolver
+from .constant import make_batch_indexes
 from utils import *
 
-class HetRecSysSolver(HeuristicsSolver):
+class HetRecSysSolver(BaselineSolver):
     def __init__(self, args):
         super().__init__(args)
         args.embed_dim = 16

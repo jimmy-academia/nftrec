@@ -5,11 +5,11 @@ from tqdm import tqdm
 
 from torch_geometric.nn import LightGCN
 
-from .group import HeuristicsSolver
+from .base import BaselineSolver
 
 from utils import *
 
-class ReciprocalSolver(HeuristicsSolver):
+class ReciprocalSolver(BaselineSolver):
     def __init__(self, args):
         super().__init__(args)
         self.model = LightGCN(self.nftP.N+self.nftP.M, 64, 5)

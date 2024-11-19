@@ -1,5 +1,4 @@
-from .base import RandomSolver
-from .greedy import GreedySolver
+from .base import RandomSolver, GreedySolver
 from .auction import AuctionSolver
 from .group import GroupSolver
 

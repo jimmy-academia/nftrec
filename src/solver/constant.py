@@ -1,6 +1,8 @@
+import math
 import copy
 import torch 
 import random
+from utils import *
 from tqdm import tqdm
 
 def make_batch_indexes(total, batch_size, shuffle=False):
@@ -18,8 +20,8 @@ def make_batch_indexes(total, batch_size, shuffle=False):
     else:
         raise ValueError('total must be an iterable or an integer')
 
-def hatrelu(x, threshold=1):
-    return threshold - torch.nn.functional.relu(threshold-x)
+# def hatrelu(x, threshold=1):
+#     return threshold - torch.nn.functional.relu(threshold-x)
 
 class Constfuncs:
     def tensorize(self, label_vec, yield_mask=False):

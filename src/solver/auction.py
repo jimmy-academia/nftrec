@@ -1,13 +1,22 @@
 import random
 import torch
-from .greedy import OptimizationSolver
+from .base import BaseSolver
 from tqdm import tqdm
-
-
-class AuctionSolver(OptimizationSolver):
+    
+class AuctionSolver(BaseSolver):
     def __init__(self, args):
         super().__init__(args)
     
+    def solve(self, set_pricing=None):
+        if set_pricing is None:
+            self.pricing = self.optimize_pricing()
+            spending = self.Uij/self.pricing
+            spending = spending/spending.sum(1).unsqueeze(1) * self.buyer_budgets.unsqueeze(1)
+            self.holdings = spending/spending.sum(0) * self.nft_counts
+        else:
+            self.pricing = set_pricing
+            self.holdings = self.optimize_spending()
+
     def optimize_pricing(self):
         pricing = torch.rand(self.nftP.M, device=self.args.device)
         remain_budgets = self.buyer_budgets.clone()
@@ -45,7 +54,7 @@ class AuctionSolver(OptimizationSolver):
                         pbar.set_postfix(val=pricing[j].item())
 
             if all(remain_budgets < min(pricing)): break
-        self.pricing = pricing
+        return pricing
 
     def optimize_spending(self):
         remain_budgets = self.buyer_budgets.clone()
@@ -67,4 +76,4 @@ class AuctionSolver(OptimizationSolver):
                         remain_budgets[i] -= amount*self.pricing[j]
             if all(remain_budgets < min(self.pricing)): break
         
-        self.holdings = x
+        return x
