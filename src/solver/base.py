@@ -17,9 +17,9 @@ class BaseSolver(Constfuncs):
         self.breeding_type = args.breeding_type
 
         # cache system: same setN, setM, nft_project_name yeilds same results.
-        cache_dir = args.ckpt_dir/'cache'/f'{args.nft_project_name}_N_{args.setN}_M_{args.setM}'
-        cache_dir.mkdir(parents=True, exist_ok=True)
-        cache_nft_project_file = cache_dir / f'project.pth'
+        self.cache_dir = args.ckpt_dir/'cache'/f'{args.nft_project_name}_N_{args.setN}_M_{args.setM}'
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        cache_nft_project_file = self.cache_dir / f'project.pth'
         if cache_nft_project_file.exists():
             self.nftP = torch.load(cache_nft_project_file, weights_only=False)
         else:
@@ -39,7 +39,7 @@ class BaseSolver(Constfuncs):
         self.Uij = torch.matmul(self.buyer_preferences, self.nft_attributes.T.float())
 
         if self.breeding_type == 'Heterogeneous':
-            cache_heter_labels_path = cache_dir / f'heter_files_{args.num_trait_div}_{args.num_attr_class}_{self.nftP.N}_{self.nftP.M}.pth'
+            cache_heter_labels_path = self.cache_dir / f'heter_files_{args.num_trait_div}_{args.num_attr_class}_{self.nftP.N}_{self.nftP.M}.pth'
             if cache_heter_labels_path.exists():
                 self.nft_trait_divisions, self.nft_attribute_classes, self.buyer_types = torch_cleanload(cache_heter_labels_path, self.args.device)
             else:
@@ -48,7 +48,7 @@ class BaseSolver(Constfuncs):
                 self.buyer_types = torch.randint(2, (self.nftP.N,)).to(self.args.device)
                 torch_cleansave((self.nft_trait_divisions, self.nft_attribute_classes, self.buyer_types), cache_heter_labels_path)
         if self.breeding_type != 'None':
-            cache_parents_path = cache_dir / f'parents_{args.breeding_type}_{args.num_child_sample}_{args.mutation_rate}_mod{args.module_id}.pth'
+            cache_parents_path = self.cache_dir / f'parents_{args.breeding_type}_{args.num_child_sample}_{args.mutation_rate}_mod{args.module_id}.pth'
             if cache_parents_path.exists():
                 # print('loading from...', cache_parents_path)
                 self.ranked_parent_nfts, self.ranked_parent_expectations = torch_cleanload(cache_parents_path, self.args.device)
@@ -118,18 +118,18 @@ class BaseSolver(Constfuncs):
             
                 # Apply scaling to holdings
                 holdings[batch_users] *= scaling_factor.unsqueeze(1)  # Broadcasting for items dimension
-        
+            
             # Update assigned totals for next iteration
             self.assigned += holdings[batch_users].sum(0)
 
-            self.buyer_utilities.append(self.calculate_buyer_utilities(
+            batch_utility = self.calculate_buyer_utilities(
                 batch_users,
                 holdings[batch_users],
                 self.buyer_budgets[batch_users],
                 self.pricing,   
-                True,
-            ))
-
+                False,
+            )
+            self.buyer_utilities.append(batch_utility)
             self.seller_revenue += (self.pricing * holdings[batch_users]).sum()
         self.buyer_utilities = torch.cat(self.buyer_utilities, dim=0)
         
@@ -149,14 +149,23 @@ class BaselineSolver(BaseSolver):
     def __init__(self, args):
         super().__init__(args)
         self.k = 20
+        self.add_time = 0
 
     def initial_assignment(self):
         raise NotImplementedError
     
+    def objective_pricing(self):
+        pricing = self.Vj/self.Vj.mean() * (self.buyer_budgets.sum()/self.nft_counts.sum())
+        return pricing
+
     def solve(self):
         _assignments = self.initial_assignment()
-        self.pricing = self.greedy_init_pricing()
+        assert _assignments.shape == torch.Size([self.nftP.N, self.k])
+        self.pricing = self.objective_pricing()
         self.holdings = self.opt_uniform_holding(_assignments)
+
+        return self.add_time
+
 
     def opt_uniform_holding(self, _assignments):
         # iterate over batch buyer to adjust holding recommendation for top k assignemnts
@@ -167,22 +176,23 @@ class BaselineSolver(BaseSolver):
         row_indices = torch.arange(spending.size(0), device='cuda:0').unsqueeze(1)
         spending[row_indices, _assignments] = 1.0
 
-        spending_scales = torch.rand(N, device=self.args.device) * 1/self.k
+        spending_scales = torch.rand(N, device=self.args.device)
+        spending_scales.clamp_(0, 1)
 
         user_iterator = self.buyer_budgets.argsort(descending=True).tolist()
         user_iterator = make_batch_indexes(user_iterator, batch_size)
 
         pbar = tqdm(range(16), ncols=88, desc='Optimizing holdings')
 
-        prev_remaining = float('inf')
+        prev_scale = float('inf')
         for __ in pbar:
             for user_index in user_iterator:
 
                 spending_scale = spending_scales[user_index].clone().detach().requires_grad_(True)
-                batch_spending = spending[user_index] * spending_scale.unsqueeze(1)
-                # assert all(batch_spending.sum(1) < 1)
                 batch_budgets = self.buyer_budgets[user_index]
-                holdings = batch_spending[:, :-1] * batch_budgets.unsqueeze(1) / self.pricing.unsqueeze(0)
+                batch_spending = spending[user_index] * spending_scale.unsqueeze(1) * batch_budgets.unsqueeze(1) /self.k
+                holdings = batch_spending[:, :-1] / self.pricing.unsqueeze(0)
+
                 utility = self.calculate_buyer_utilities(
                     user_index, holdings, batch_budgets, self.pricing
                 )
@@ -192,23 +202,22 @@ class BaselineSolver(BaseSolver):
                 _grad = spending_scale.grad
 
                 spending_scales[user_index] += 1e-2 * _grad/_grad.max()
-                spending_scales.clamp_(min=0, max=1/self.k)
+                spending_scales.clamp_(min=0, max=1)
 
                 # Normalize spending
                 # spending = spending / spending.sum(dim=1, keepdim=True)
                 
                 # Track convergence
-                remaining = spending[:, -1].sum()
-                delta = abs(remaining - prev_remaining)
-                prev_remaining = remaining
+                delta = (spending_scales - prev_scale).abs().sum()
+                prev_scale = spending_scales
                 pbar.set_postfix(delta=float(delta))
                 
                 if delta < 1e-6:
                     break
         
         # Calculate final demand
-        final_spending = spending * spending_scales.unsqueeze(1)
-        holdings = final_spending[:, :-1] * self.buyer_budgets.unsqueeze(1) / self.pricing.unsqueeze(0)
+        final_spending = spending * spending_scales.unsqueeze(1) * self.buyer_budgets.unsqueeze(1) / self.k
+        holdings = final_spending[:, :-1] / self.pricing.unsqueeze(0)
         return holdings
 
 

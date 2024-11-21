@@ -29,7 +29,7 @@ class BANTERSolver(BaseSolver):
         if self.args.ablation_id == 2:
             return
 
-        if read_inital_steps:
+        if self.args.read_inital_steps:
             self.seller_revenue_list = []
         for iter_ in pbar:
 
@@ -48,7 +48,7 @@ class BANTERSolver(BaseSolver):
             pbar.set_postfix(excess=float(excess.sum()))
             self.pricing_list.append(self.pricing)
 
-            if read_inital_steps:
+            if self.args.read_inital_steps:
                 self.count_results()
                 self.seller_revenue_list.append(self.seller_revenue)
                 if iter_ == 20: break

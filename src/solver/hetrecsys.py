@@ -1,3 +1,4 @@
+import time
 import random
 import torch
 from tqdm import tqdm
@@ -11,12 +12,10 @@ class HetRecSysSolver(BaselineSolver):
         args.embed_dim = 16
         args.percent = 0.6
         args.reg = 1
-
-        if not args.large:
-            self.do_preparations()
-
-    def do_preparations(self):
-        self.prepare_Nums_Lists_Data()
+    
+        self.cache_path = self.cache_dir/f'HetRecSys.pth'
+        if not self.cache_path.exists():
+            self.prepare_Nums_Lists_Data()
         self.model = GraphConsis(self.args, self.Nums, self.Lists)
         self.model.to(self.args.device)
 
@@ -79,8 +78,18 @@ class HetRecSysSolver(BaselineSolver):
                 optimizer.step()
 
     def initial_assignment(self):
-        self.train_model()
-        _len = 32
+
+        if not self.cache_path.exists():
+            start = time.time()
+            self.train_model()
+            runtime = time.time() - start
+            torch.save({'runtime':runtime, 'weight': self.model.cpu().state_dict()}, self.cache_path)
+        else:
+            data = torch.load(self.cache_path)
+            self.add_time += data.get('runtime')
+            self.model.load_state_dict(data.get('weight'))
+
+        _len = self.k
         _assignment = torch.ones((self.nftP.N, _len), device=self.args.device).long()
         with torch.no_grad():
             for i in range(self.nftP.N):

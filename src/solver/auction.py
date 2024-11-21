@@ -9,7 +9,7 @@ class AuctionSolver(BaseSolver):
     
     def solve(self, set_pricing=None):
         if set_pricing is None:
-            self.pricing = self.optimize_pricing()
+            self.pricing = self.bidding()
             spending = self.Uij/self.pricing
             spending = spending/spending.sum(1).unsqueeze(1) * self.buyer_budgets.unsqueeze(1)
             self.holdings = spending/spending.sum(0) * self.nft_counts
@@ -17,14 +17,14 @@ class AuctionSolver(BaseSolver):
             self.pricing = set_pricing
             self.holdings = self.optimize_spending()
 
-    def optimize_pricing(self):
+    def bidding(self):
         pricing = torch.rand(self.nftP.M, device=self.args.device)
         remain_budgets = self.buyer_budgets.clone()
 
         x,h,l = map(lambda __: torch.zeros(self.nftP.N, self.nftP.M).to(self.args.device), range(3))
         a = self.nft_counts.clone().float()
         eps = sum(remain_budgets)/self.nftP.N/self.nftP.M
-        pbar = tqdm(range(128), ncols=88, desc='auction process')
+        pbar = tqdm(range(64), ncols=88, desc='auction process')
         for __ in pbar:
             random_id_list = random.sample(range(self.nftP.N), self.nftP.N)
             for i in tqdm(random_id_list, leave=False, ncols=88):

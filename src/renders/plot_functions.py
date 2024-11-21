@@ -11,9 +11,9 @@ plt.rcParams.update({
 
 output_dir = Path('output')
 output_dir.mkdir(exist_ok=True)
+ckpt_dir = Path('ckpt')
 
-
-def rainbow_bar_plot(project_revenues, infos, filepath):
+def rainbow_bar_plot(project_revenues, infos, filepath, preview=False):
     """Creates a rainbow bar plot and saves it to a file.
 
     Args:
@@ -21,7 +21,7 @@ def rainbow_bar_plot(project_revenues, infos, filepath):
         infos (dict): Information for the plot (e.g., colors, xticks, labels).
         filepath (str or Path): Path to save the plot.
     """
-    plt.figure(figsize=(13, 6), dpi=200)
+    plt.figure(figsize=(2.2, 1)) if preview else plt.figure(figsize=(13, 6), dpi=200)
     plt.ylabel(infos['ylabel'], fontweight='bold')
     plt.ylim(infos['y_axis_min'], infos['y_axis_max'])
 

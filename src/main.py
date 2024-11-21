@@ -7,17 +7,21 @@ from utils import set_seed, set_verbose
 def strike(text):
     return ''.join([u'\u0336{}'.format(c) for c in text])
 
+# {strike('')}
+
 def main():
 
     print('cdd <=> cdp')
     print('\n === \n work on: main experiments => \n === \n')
     print(f'''
         {strike('1. NFT data in dataset.py')}
-        2. solver/base.py: => make random work!
-        - solver/project.py
-        - solver/base.py => opt_uniform_holding
-
+        {strike('2. solver/base.py: => make random work!')}
+        {strike('')}
+        {strike('')}
+        {strike('')}
         3. finish main experiments, check result
+        4. finish ablation experiments, check result
+        5. finish sensitivity experiments, check result
         ===
         plan ablation and further experiments
         ''')

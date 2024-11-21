@@ -5,6 +5,8 @@ import random
 from utils import *
 from tqdm import tqdm
 
+from debug import *
+
 def make_batch_indexes(total, batch_size, shuffle=False):
     if hasattr(total, '__iter__') and hasattr(total, '__getitem__'):
         if shuffle:
@@ -239,7 +241,7 @@ class Constfuncs:
         R = budgets - sum_j price_j * holdings_j
         '''
         U_item = (holdings * (self.Vj.to(self.args.device))).sum(1)/2
-
+        user_index = torch.tensor(user_index).to(self.args.device)
         # sub_batch operation
         chunk_size = 32 
         subtotals = []
@@ -252,13 +254,15 @@ class Constfuncs:
 
 
         U_breeding = torch.zeros_like(U_item)
+        nzmask = holdings.sum(1).nonzero(as_tuple=True)[0]
         if self.breeding_type != 'None':
-            U_breeding = self.breeding_utility(holdings, user_index) 
+            U_breeding[nzmask] = self.breeding_utility(holdings[nzmask], user_index[nzmask]) 
             scale = 2 if self.breeding_type == 'Heterogeneous' else 7
             U_breeding = U_breeding*scale
-            # (sum(U_item).detach()/(sum(U_breeding).detach()+1e-5))
 
         self.ratio = U_item.detach().sum()/U_breeding.detach().sum()
+
+        utility = U_item + U_coll + U_breeding + R
 
         if not split:
             return U_item + U_coll + U_breeding + R
@@ -281,7 +285,7 @@ class Constfuncs:
             for p in range(parents.shape[-1]):
                 parent_attr_freq += (self.nft_attributes[parents[..., p]] * selection_mask.unsqueeze(-1)).sum(dim=(0, 1))
 
-            parent_attr_freq = parent_attr_freq/parent_attr_freq.max()
+            parent_attr_freq = (parent_attr_freq+1e-4)/(parent_attr_freq.sum()+1e-4)
             # adjust expectation
             population_factor = torch.ones(parents.shape[1]).to(self.args.device)*2
             
@@ -303,7 +307,6 @@ class Constfuncs:
                 
             population_factor /= (parents.shape[-1])
 
-            # population_factor = (torch.stack([self.nft_attributes[parents[..., p]] for p in range(parents.shape[-1])]) * parent_attr_freq).sum(0).mean(-1)+2
-            expectation = expectation *  torch.exp(-population_factor/4) 
+            expectation = expectation *  torch.exp(-population_factor*4) 
         U_breeding = (selection_mask * expectation).sum(1) 
         return U_breeding

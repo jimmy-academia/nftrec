@@ -2,7 +2,7 @@ import shutil
 import logging
 from arguments import default_args
 from solver import BANTERSolver
-from collection import defaultdict
+from collections import defaultdict
 
 nft_project = 'Fat Ape Club'
 breeding = 'ChildProject'

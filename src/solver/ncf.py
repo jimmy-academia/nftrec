@@ -1,3 +1,4 @@
+import time
 import random
 from tqdm import tqdm
 
@@ -11,6 +12,8 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
+
+# self.add_time
 
 class NCFModel(nn.Module):
     def __init__(self, num_users, num_items, embedding_dim=32, mlp_hidden_layers=[64, 32, 16, 8]):
@@ -72,9 +75,19 @@ class NCFSolver(BaselineSolver):
         # targets = self.Uij[user_indices, item_indices]
         # dataset = TensorDataset(user_indices, item_indices, targets)
         # self.dataloader = DataLoader(dataset, batch_size=10240, shuffle=True)
-        self.prepare_dataset()
-        self.train_model()
-        _len = 32
+
+        cache_path = self.cache_dir/f'NCF_.pth'
+        if not cache_path.exists():
+            start = time.time()
+            self.prepare_dataset()
+            self.train_model()
+            runtime = time.time() - start
+            torch.save({'runtime':runtime, 'weight': self.model.cpu().state_dict()}, cache_path)
+        else:
+            data = torch.load(cache_path)
+            self.add_time += data.get('runtime')
+            self.model.load_state_dict(data.get('weight'))
+
         item_indices = torch.arange(M).to(self.args.device)
 
         _assignment = []
@@ -82,7 +95,7 @@ class NCFSolver(BaselineSolver):
             i = torch.LongTensor([i]).to(self.args.device)
             i = i.repeat(M)
             prediction = self.model(i, item_indices).squeeze()
-            __, topk_indices = prediction.topk(_len)
+            __, topk_indices = prediction.topk(self.k)
             _assignment.append(topk_indices)
 
         _assignment = torch.stack(_assignment)

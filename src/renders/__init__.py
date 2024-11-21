@@ -9,7 +9,7 @@ directory = os.path.dirname(__file__)
 for filename in os.listdir(directory):
     # if filename != "__init__.py":
     if "__" not in filename:
-        module_name = f"renders.{filename[:-3]}"  # stats.py, plot_main.py
+        module_name = f"renders.{filename[:-3]}"  # stats.py, main.py
         function_name = f"print_{filename[:-3].split('_')[-1]}"  # e.g., `print_stats`, `print_main`
 
         # Import the module

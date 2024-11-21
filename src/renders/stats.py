@@ -2,7 +2,7 @@ from solver.base import BaseSolver
 from utils import *
 from arguments import default_args, nft_project_names, NFT_Projects
 
-def print_stats():
+def print_stats(preview):
     args = default_args()
     args.setN = None
     args.setM = None

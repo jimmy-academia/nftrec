@@ -24,7 +24,7 @@ def run_main_exp():
         args.nft_project_name = nft_project_name
         for _method in Baseline_Methods:
             for _breed in Breeding_Types:
-                result_file = args.checkpoint_dir / f'{nft_project_name}_{_method}_{_breed}'
+                result_file = args.checkpoint_dir / f'{nft_project_name}_{_method}_{_breed}.json'
             
                 if result_file.exists() and not args.overwrite:
                     logging.info(f'|> result file:{result_file} exists <|')
@@ -34,16 +34,18 @@ def run_main_exp():
                     Solver = get_solver(args, _method)
 
                     start_time = time.time()
-                    Solver.solve() 
+                    add_time = Solver.solve() 
+                    add_time = 0 if add_time is None else add_time
                     Solver.count_results() 
-                    runtime = time.time() - start_time
+                    runtime = time.time() - start_time + add_time
                     Result = {
                         'runtime': runtime,
                         'seller_revenue': Solver.seller_revenue,
-                        'avg_buyer_utility': Solver.buyer_utilities.sum(1).mean().item()
+                        'avg_buyer_utility': Solver.buyer_utilities.mean().item()
                     }
                     Result = {k:deep_to_pylist(v) for k, v in Result.items()}
-                    dumpj(Result, result_file.with_suffix('.json'))
+
+                    dumpj(Result, result_file)
                     torch.save(
                         {'buyer_utilities': Solver.buyer_utilities, 
                         'pricing': Solver.pricing}, 

@@ -6,7 +6,7 @@ NFT_Projects = ['Axies Infinity', 'Bored Ape Yacht Club', 'Crypto Kitties', 'Fat
 nft_project_names = [''.join(Project_Name.split()).lower() for Project_Name in NFT_Projects]
 min_purchase = [6, 2, 2, 1, 1]
 
-Baseline_Methods = ['Greedy', 'Auction', 'Group', 'NCF', 'LightGCN', 'HetRecSys', 'BANTER'] # 'Random', 'Reciprocal',
+Baseline_Methods = ['Greedy', 'Auction', 'Group', 'NCF', 'LightGCN', 'HetRecSys', 'BANTER']
 Breeding_Types = ['Heterogeneous', 'Homogeneous', 'ChildProject', 'None']
 Breeding_Types_Short = ['Heter', 'Homo', 'Child', 'None']
 
@@ -33,8 +33,8 @@ def default_args():
     args.setM = None
     
     args.overwrite = False
-    # args.gamma1 = 0.1
-    # args.gamma2 = 0.001
+    args.gamma1 = 0.1
+    args.gamma2 = 0.001
     return args
 
-plot_colors = ['#FFD92F', '#2CA02C', '#FF7F0E', '#1770af', '#ADD8E6', '#D62728']
+plot_colors = ['#FFD92F', '#2CA02C', '#FF7F0E', '#1770af', '#ADD8E6', '#BCBD22', '#D62728']
