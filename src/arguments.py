@@ -4,11 +4,11 @@ from types import SimpleNamespace
 
 NFT_Projects = ['Axies Infinity', 'Bored Ape Yacht Club', 'Crypto Kitties', 'Fat Ape Club', 'Roaring Leader'] 
 nft_project_names = [''.join(Project_Name.split()).lower() for Project_Name in NFT_Projects]
-min_purchase = [6, 2, 2, 1, 1]
+min_purchase = [6, 2, 2, 0, 1]
 
 Baseline_Methods = ['Greedy', 'Auction', 'Group', 'NCF', 'LightGCN', 'HetRecSys', 'BANTER']
 Breeding_Types = ['Heterogeneous', 'Homogeneous', 'ChildProject', 'None']
-Breeding_Types_Short = ['Heter', 'Homo', 'Child', 'None']
+# Breeding_Types_Short = ['Heter', 'Homo', 'Child', 'None']
 
 
 def default_args():

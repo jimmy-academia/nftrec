@@ -1,6 +1,6 @@
 import torch
 from fast_pytorch_kmeans import KMeans
-from .base import BaselineSolver
+from .greedy import BaselineSolver
 from tqdm import tqdm
 
 from debug import *

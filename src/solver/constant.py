@@ -306,7 +306,6 @@ class Constfuncs:
                     population_factor += batch_population_factor
                 
             population_factor /= (parents.shape[-1])
-
-            expectation = expectation *  torch.exp(-population_factor*4) 
+            expectation = expectation *  torch.exp(-population_factor/100) 
         U_breeding = (selection_mask * expectation).sum(1) 
         return U_breeding

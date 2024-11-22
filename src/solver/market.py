@@ -29,8 +29,14 @@ class BANTERSolver(BaseSolver):
         if self.args.ablation_id == 2:
             return
 
-        if self.args.read_inital_steps:
+        if self.args.read_initial_steps:
             self.seller_revenue_list = []
+
+        counter = 0
+        best_counter = 0
+        best_excess = 1e9
+        best_pricing = None
+        
         for iter_ in pbar:
 
             demand = self.solve_user_demand()
@@ -45,15 +51,29 @@ class BANTERSolver(BaseSolver):
 
             self.pricing *= ( 1 +  eps * excess/(excess.abs().sum()))
             self.pricing = torch.where(self.pricing < 1e-10, 1e-10, self.pricing) 
-            pbar.set_postfix(excess=float(excess.sum()))
-            self.pricing_list.append(self.pricing)
+            pbar.set_postfix(excess=float(excess.abs().sum()))
 
-            if self.args.read_inital_steps:
+            if excess.abs().sum() < 500:
+                counter += 1
+            else:
+                counter = 0
+            if excess.abs().sum() < best_excess:
+                best_excess = excess.sum()
+                best_pricing = self.pricing.clone()
+                best_counter = 0
+            else:
+                best_counter += 1
+            if (counter > 5 or best_counter > 10) and not self.args.read_initial_steps:
+                break
+
+            if self.args.read_initial_steps:
+                self.pricing_list.append(self.pricing)
+                self.holdings = self.solve_user_demand()
                 self.count_results()
                 self.seller_revenue_list.append(self.seller_revenue)
                 if iter_ == 20: break
-            # eps *= self.args.decay
         
+        self.pricing = best_pricing
         self.holdings = self.solve_user_demand()
 
     def solve_user_demand(self, set_user_index=None):
@@ -73,7 +93,6 @@ class BANTERSolver(BaseSolver):
         spending /= spending.sum(1).unsqueeze(1)
 
         pbar = tqdm(range(16), ncols=88, desc='Solving user demand!', leave=False)
-        
         user_eps = 1e-4
         for __ in pbar:
             buyer_utility = 0

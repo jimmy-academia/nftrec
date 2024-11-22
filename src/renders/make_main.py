@@ -4,7 +4,7 @@ import logging
 from utils import loadj
 from pathlib import Path
 from .plot_functions import output_dir, ckpt_dir, rainbow_bar_plot, make_legend
-from arguments import nft_project_names, plot_colors, Breeding_Types_Short, Breeding_Types, Baseline_Methods
+from arguments import nft_project_names, plot_colors, Breeding_Types, Baseline_Methods
 
 def print_main(preview):
 
@@ -40,7 +40,7 @@ def print_main(preview):
                 'y_axis_max': y_axis_max,
                 'y_axis_min': y_axis_min,
                 'colors': plot_colors,
-                'xticks': Breeding_Types_Short,
+                'xticks': Breeding_Types[:-1],
             }
 
             rainbow_bar_plot(results, infos, filepath, preview)
@@ -50,7 +50,7 @@ def print_main(preview):
 
 def read_info(tag, nft_project_name, result_dir):
     results = []
-    for breeding_type in Breeding_Types:
+    for breeding_type in Breeding_Types[:-1]:
         breeding_values = []
         for method in Baseline_Methods:
             result_json = result_dir/f'{nft_project_name}_{method}_{breeding_type}.json'

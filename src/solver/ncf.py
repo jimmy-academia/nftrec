@@ -2,7 +2,7 @@ import time
 import random
 from tqdm import tqdm
 
-from .base import BaselineSolver
+from .greedy import BaselineSolver
 from utils import *
 
 # N buyer M instance
@@ -76,17 +76,19 @@ class NCFSolver(BaselineSolver):
         # dataset = TensorDataset(user_indices, item_indices, targets)
         # self.dataloader = DataLoader(dataset, batch_size=10240, shuffle=True)
 
-        cache_path = self.cache_dir/f'NCF_.pth'
+        cache_path = self.cache_dir/f'NCF.pth'
         if not cache_path.exists():
             start = time.time()
             self.prepare_dataset()
             self.train_model()
             runtime = time.time() - start
             torch.save({'runtime':runtime, 'weight': self.model.cpu().state_dict()}, cache_path)
+            self.model.to(self.args.device)
         else:
-            data = torch.load(cache_path)
+            data = torch.load(cache_path, weights_only=True)
             self.add_time += data.get('runtime')
             self.model.load_state_dict(data.get('weight'))
+            self.model.to(self.args.device)
 
         item_indices = torch.arange(M).to(self.args.device)
 
@@ -152,7 +154,7 @@ class NCFSolver(BaselineSolver):
         criterion = nn.BCELoss()  # Binary cross-entropy loss for positive/negative classification
 
         # Training loop
-        pbar = tqdm(range(128), ncols=90, desc='NCF training')
+        pbar = tqdm(range(64), ncols=90, desc='NCF training')
         for epoch in pbar:
             for batch in tqdm(self.dataloader, ncols=90, desc='iter', leave=False):
                 user_batch, item_batch, target_batch = batch

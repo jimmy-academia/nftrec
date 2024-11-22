@@ -41,7 +41,8 @@ def run_main_exp():
                     Result = {
                         'runtime': runtime,
                         'seller_revenue': Solver.seller_revenue,
-                        'avg_buyer_utility': Solver.buyer_utilities.mean().item()
+                        'avg_buyer_utility': Solver.buyer_utilities.mean().item(),
+                        'utility_component': Solver.utility_component
                     }
                     Result = {k:deep_to_pylist(v) for k, v in Result.items()}
 

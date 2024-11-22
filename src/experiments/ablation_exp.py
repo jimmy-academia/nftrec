@@ -1,9 +1,12 @@
+import time
 import shutil
 import logging
 from arguments import default_args
 from solver import BANTERSolver
+from utils import deep_to_pylist, dumpj
 
 nft_project = 'Fat Ape Club'
+nft_project_name = 'fatapeclub'
 breeding = 'ChildProject'
 method = 'BANTER'
 
@@ -31,6 +34,8 @@ def run_task1_optimization():
     args.checkpoint_dir = args.ckpt_dir / 'ablation/optimization'
     args.checkpoint_dir.mkdir(parents=True, exist_ok=True)
     args.read_initial_steps = True
+    args.nft_project_name = nft_project_name
+    args.breeding_type = breeding
 
     for ablation_id in range(3):
         result_file = args.checkpoint_dir / f'{nft_project}_{breeding}_optimization{ablation_id}'

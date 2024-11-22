@@ -4,31 +4,11 @@ from dataset import prepare_nft_data
 from experiments import *
 from utils import set_seed, set_verbose
 
-def strike(text):
-    return ''.join([u'\u0336{}'.format(c) for c in text])
-
-# {strike('')}
-
 def main():
 
-    print('cdd <=> cdp')
-    print('\n === \n work on: main experiments => \n === \n')
-    print(f'''
-        {strike('1. NFT data in dataset.py')}
-        {strike('2. solver/base.py: => make random work!')}
-        {strike('')}
-        {strike('')}
-        {strike('')}
-        3. finish main experiments, check result
-        4. finish ablation experiments, check result
-        5. finish sensitivity experiments, check result
-        ===
-        plan ablation and further experiments
-        ''')
-
-    choices = ['main', 'ablation', 'sensitivity']
+    choices = ['main', 'ablation', 'scale', 'qualitative']
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', choices=choices+['all'], default='main')
+    parser.add_argument('-c', choices=choices+['all'], default='scale')
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--verbose', choices=[0,1,2], default=2) # warning; info; debug
     args = parser.parse_args()

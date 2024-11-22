@@ -40,6 +40,8 @@ def rainbow_bar_plot(project_revenues, infos, filepath, preview=False):
     else:
         plt.xticks([])
 
+    if infos['log']:
+        plt.yscale('log')
     plt.tight_layout()
     plt.savefig(filepath, bbox_inches='tight') # bbox_inches='tight'??
     plt.close()

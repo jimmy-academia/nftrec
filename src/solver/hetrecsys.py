@@ -2,7 +2,7 @@ import time
 import random
 import torch
 from tqdm import tqdm
-from .base import BaselineSolver
+from .greedy import BaselineSolver
 from .constant import make_batch_indexes
 from utils import *
 
@@ -14,10 +14,15 @@ class HetRecSysSolver(BaselineSolver):
         args.reg = 1
     
         self.cache_path = self.cache_dir/f'HetRecSys.pth'
-        if not self.cache_path.exists():
-            self.prepare_Nums_Lists_Data()
+        if not args.large:
+            # load afterwards modifications for args.large
+            self.do_preparations()
+
+    def do_preparations(self):
+        self.prepare_Nums_Lists_Data()
         self.model = GraphConsis(self.args, self.Nums, self.Lists)
         self.model.to(self.args.device)
+
 
     def prepare_Nums_Lists_Data(self):
         '''
@@ -84,10 +89,13 @@ class HetRecSysSolver(BaselineSolver):
             self.train_model()
             runtime = time.time() - start
             torch.save({'runtime':runtime, 'weight': self.model.cpu().state_dict()}, self.cache_path)
+            self.model.to(self.args.device)
+            
         else:
-            data = torch.load(self.cache_path)
+            data = torch.load(self.cache_path, weights_only=True)
             self.add_time += data.get('runtime')
             self.model.load_state_dict(data.get('weight'))
+            self.model.to(self.args.device)
 
         _len = self.k
         _assignment = torch.ones((self.nftP.N, _len), device=self.args.device).long()

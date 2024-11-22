@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 from torch_geometric.nn import LightGCN
 
-from .base import BaselineSolver
+from .greedy import BaselineSolver
 
 from utils import *
 
